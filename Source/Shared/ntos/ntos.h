@@ -5,9 +5,9 @@
 *
 *  TITLE:       NTOS.H
 *
-*  VERSION:     1.223
+*  VERSION:     1.227
 *
-*  DATE:        12 Mar 2024
+*  DATE:        07 Oct 2024
 *
 *  Common header file for the ntos API functions and definitions.
 *
@@ -896,7 +896,12 @@ typedef struct _SYSTEM_ISOLATED_USER_MODE_INFORMATION {
     BOOLEAN SpareFlags : 2;
     BOOLEAN TrustletRunning : 1;
     BOOLEAN HvciDisableAllowed : 1;
-    BOOLEAN SpareFlags2 : 6;
+    BOOLEAN HardwareEnforcedVbs : 1;
+    BOOLEAN NoSecrets : 1;
+    BOOLEAN EncryptionKeyPersistent : 1;
+    BOOLEAN HardwareEnforcedHvpt : 1;
+    BOOLEAN HardwareHvptAvailable : 1;
+    BOOLEAN SpareFlags2 : 1;
     BOOLEAN Spare0[6];
     ULONGLONG Spare1;
 } SYSTEM_ISOLATED_USER_MODE_INFORMATION, *PSYSTEM_ISOLATED_USER_MODE_INFORMATION;
@@ -1103,6 +1108,10 @@ typedef enum _PROCESSINFOCLASS {
     ProcessMembershipInformation = 109,
     ProcessEffectiveIoPriority = 110,
     ProcessEffectivePagePriority = 111,
+    ProcessSchedulerSharedData = 112,
+    ProcessSlistRollbackInformation = 113,
+    ProcessNetworkIoCounters = 114,
+    ProcessFindFirstThreadByTebValue = 115,
     MaxProcessInfoClass
 } PROCESSINFOCLASS;
 
@@ -1163,6 +1172,10 @@ typedef enum _THREADINFOCLASS {
     ThreadStrongerBadHandleChecks,
     ThreadEffectiveIoPriority,
     ThreadEffectivePagePriority,
+    ThreadUpdateLockOwnership,
+    ThreadSchedulerSharedDataSlot,
+    ThreadTebInformationAtomic,
+    ThreadIndexInformation,
     MaxThreadInfoClass
 } THREADINFOCLASS;
 
@@ -1303,7 +1316,9 @@ typedef enum _PS_MITIGATION_OPTION {
     PS_MITIGATION_OPTION_USER_CET_SET_CONTEXT_IP_VALIDATION,
     PS_MITIGATION_OPTION_BLOCK_NON_CET_BINARIES,
     PS_MITIGATION_OPTION_CET_DYNAMIC_APIS_OUT_OF_PROC_ONLY,
-    PS_MITIGATION_OPTION_REDIRECTION_TRUST
+    PS_MITIGATION_OPTION_REDIRECTION_TRUST,
+    PS_MITIGATION_OPTION_RESTRICT_CORE_SHARING,
+    PS_MITIGATION_OPTION_FSCTL_SYSTEM_CALL_DISABLE
 } PS_MITIGATION_OPTION;
 
 typedef enum _PS_CREATE_STATE {
@@ -1491,6 +1506,8 @@ typedef enum _PS_ATTRIBUTE_NUM {
     PsAttributeMachineType,
     PsAttributeComponentFilter,
     PsAttributeEnableOptionalXStateFeatures,
+    PsAttributeSupportedMachines,
+    PsAttributeSveVectorLength,
     PsAttributeMax
 } PS_ATTRIBUTE_NUM;
 
@@ -1875,6 +1892,7 @@ typedef enum _SYSTEM_INFORMATION_CLASS {
     SystemBadPageInformationEx = 244,
     SystemResourceDeadlockTimeout = 245,
     SystemBreakOnContextUnwindFailureInformation = 246,
+    SystemOslRamdiskInformation = 247,
     MaxSystemInfoClass
 } SYSTEM_INFORMATION_CLASS, * PSYSTEM_INFORMATION_CLASS;
 
@@ -1970,7 +1988,19 @@ typedef struct _SYSTEM_SPECULATION_CONTROL_INFORMATION_V2 {
             ULONG PsdpHardwareProtected : 1;
             ULONG FbClearEnabled : 1;
             ULONG FbClearReported : 1;
-            ULONG Reserved : 27;
+            ULONG BhbEnabled : 1;
+            ULONG BhbDisabledSystemPolicy : 1;
+            ULONG BhbDisabledNoHardwareSupport : 1;
+            ULONG BranchConfusionStatus : 2;
+            ULONG BranchConfusionReported : 1;
+            ULONG RdclHardwareProtectedReported : 1;
+            ULONG RdclHardwareProtected : 1;
+            ULONG Reserved3 : 4;
+            ULONG Reserved4 : 3;
+            ULONG DivideByZeroReported : 1;
+            ULONG DivideByZeroStatus : 1;
+            ULONG Reserved5 : 3;
+            ULONG Reserved : 7;
         } SpeculationControlFlags2;
     };
 } SYSTEM_SPECULATION_CONTROL_INFORMATION_V2, * PSYSTEM_SPECULATION_CONTROL_INFORMATION_V2;
@@ -5238,21 +5268,37 @@ typedef VOID(NTAPI* PEX_HOST_NOTIFICATION) (
     _In_ ULONG NotificationType,
     _In_opt_ PVOID Context);
 
-typedef struct _EX_EXTENSION_INFORMATION {
+typedef struct _EX_EXTENSION_INFORMATION_V1 {
     USHORT Id;
     USHORT Version;
     USHORT FunctionCount;
-} EX_EXTENSION_INFORMATION, * PEX_EXTENSION_INFORMATION;
+} EX_EXTENSION_INFORMATION_V1, * PEX_EXTENSION_INFORMATION_V1;
+
+typedef struct _EX_EXTENSION_VERSION {
+    USHORT MajorVersion;
+    USHORT MinorVersion;
+} EX_EXTENSION_VERSION, * PEX_EXTENSION_VERSION;
+
+typedef struct _EX_EXTENSION_INFORMATION_V2 {
+    USHORT Id;
+    EX_EXTENSION_VERSION Version;
+    USHORT FunctionCount;
+} EX_EXTENSION_INFORMATION_V2, * PEX_EXTENSION_INFORMATION_V2;
+
+typedef struct _EX_HOST_TABLE {
+    EX_EXTENSION_INFORMATION_V2 HostInformation;
+    PVOID FunctionTable; //calbacks
+} EX_HOST_TABLE, * PEX_HOST_TABLE;
 
 typedef struct _EX_HOST_PARAMS {
-    EX_EXTENSION_INFORMATION HostInformation;
+    EX_EXTENSION_INFORMATION_V1 HostInformation;
     POOL_TYPE PoolType;
     PVOID HostTable;
     PVOID NotificationRoutine;
     PVOID NotificationContext;
 } EX_HOST_PARAMS, * PEX_HOST_PARAMS;
 
-typedef struct _EX_HOST_ENTRY {
+typedef struct _EX_HOST_ENTRY_V1 {
     LIST_ENTRY ListEntry;
     LONG RefCounter;
     EX_HOST_PARAMS HostParameters;
@@ -5260,10 +5306,29 @@ typedef struct _EX_HOST_ENTRY {
     EX_PUSH_LOCK PushLock;
     PVOID FunctionTable; //callbacks
     ULONG Flags;
-} EX_HOST_ENTRY, * PEX_HOST_ENTRY;
+} EX_HOST_ENTRY_V1, * PEX_HOST_ENTRY_V1;
+
+typedef struct _EX_HOST_ENTRY_V2 {
+    LIST_ENTRY ListEntry;
+    EX_EXTENSION_INFORMATION_V2 HostInformation;
+    ULONG64 RefCounter;
+    EX_PUSH_LOCK PushLock;
+    PEX_HOST_TABLE HostTablesPtr;
+    USHORT HostTablesCount;
+    PEX_HOST_TABLE CurrentHostTableEntry; //only set when an extension registers
+    PVOID NotificationRoutine;
+    PVOID NotificationContext;
+    EX_EXTENSION_VERSION ExtensionVersion;
+    EX_RUNDOWN_REF RundownProtection;
+    PVOID FunctionTable;
+    USHORT ExtensionTableFunctionCount;
+    ULONG Pad;
+    ULONG Flags;
+    EX_HOST_TABLE HostTables[1];
+} EX_HOST_ENTRY_V2, * PEX_HOST_ENTRY_V2;
 
 typedef struct _EX_EXTENSION_REGISTRATION {
-    EX_EXTENSION_INFORMATION Information;
+    EX_EXTENSION_INFORMATION_V1 Information;
     PVOID FunctionTable;
     PVOID* HostTable;
     PDRIVER_OBJECT DriverObject;
@@ -5732,7 +5797,8 @@ typedef struct _MEMORY_IMAGE_INFORMATION {
             ULONG ImagePartialMap : 1;
             ULONG ImageNotExecutable : 1;
             ULONG ImageSigningLevel : 4; // RS3
-            ULONG Reserved : 26;
+            ULONG ImageExtensionPresent : 1; // 24H2
+            ULONG Reserved : 25;
         };
     };
 } MEMORY_IMAGE_INFORMATION, * PMEMORY_IMAGE_INFORMATION;
@@ -7177,6 +7243,8 @@ typedef struct _KUSER_SHARED_DATA {
 
     ULONG64 UserPointerAuthMask;
 
+    ULONG InternsReserved[210];
+
 } KUSER_SHARED_DATA, *PKUSER_SHARED_DATA;
 #include <poppack.h>
 
@@ -7336,6 +7404,29 @@ typedef struct _FLT_OBJECT_V2 {
     LIST_ENTRY PrimaryLink;
     GUID UniqueIdentifier;
 } FLT_OBJECT_V2, *PFLT_OBJECT_V2; /* size: 0x0030 */
+
+// Since w11 25h2
+typedef struct _FLT_OBJECT_V3 {
+    ULONG Flags;
+    ULONG PointerCount;
+    EX_RUNDOWN_REF RundownRef;
+    LIST_ENTRY PrimaryLink;
+    PVOID RundownLog;
+    GUID UniqueIdentifier;
+} FLT_OBJECT_V3, * PFLT_OBJECT_V3; /* size: 0x0038 */
+
+typedef struct _FLT_OBJECT_LOG_ENTRY {
+    ULONG Action;
+    LONG Padding_25;
+    EX_RUNDOWN_REF RundownRef;
+    PVOID Stack[14];
+} FLT_OBJECT_LOG_ENTRY, * PFLT_OBJECT_LOG_ENTRY; /* size: 0x0080 */
+
+typedef struct _FLT_OBJECT_LOG {
+    LONG Index;
+    ULONG Reserved;
+    FLT_OBJECT_LOG_ENTRY Log[1024];
+} FLT_OBJECT_LOG, * PFLT_OBJECT_LOG; /* size: 0x20008 */
 
 typedef struct _FLT_SERVER_PORT_OBJECT {
     LIST_ENTRY FilterLink;
@@ -7508,8 +7599,43 @@ typedef struct _FLT_FILTER_V4 {
     /* 0x02a8 */ EX_PUSH_LOCK_AUTO_EXPAND PortLock;
 } FLT_FILTER_V4, * PFLT_FILTER_V4; /* size: 0x02b8 */
 
-typedef FLT_FILTER_V4 FLT_FILTER_COMPATIBLE;
-typedef PFLT_FILTER_V4 PFLT_FILTER_COMPATIBLE;
+// Windows 11+ (27XXX)
+typedef struct _FLT_FILTER_V5 {
+    /* 0x0000 */ FLT_OBJECT_V3 Base;
+    /* 0x0038 */ struct _FLTP_FRAME* Frame;
+    /* 0x0040 */ UNICODE_STRING Name;
+    /* 0x0050 */ UNICODE_STRING DefaultAltitude;
+    /* 0x0060 */ FLT_FILTER_FLAGS Flags;
+    /* 0x0064 */ LONG Padding;
+    /* 0x0068 */ DRIVER_OBJECT* DriverObject;
+    /* 0x0070 */ FLT_RESOURCE_LIST_HEAD InstanceList;
+    /* 0x00f0 */ struct _FLT_VERIFIER_EXTENSION* VerifierExtension;
+    /* 0x00f8 */ LIST_ENTRY VerifiedFiltersLink;
+    /* 0x0108 */ PVOID FilterUnload /* function */;
+    /* 0x0110 */ PVOID InstanceSetup /* function */;
+    /* 0x0118 */ PVOID InstanceQueryTeardown /* function */;
+    /* 0x0120 */ PVOID InstanceTeardownStart /* function */;
+    /* 0x0128 */ PVOID InstanceTeardownComplete /* function */;
+    /* 0x0130 */ struct _ALLOCATE_CONTEXT_HEADER* SupportedContextsListHead;
+    /* 0x0138 */ struct _ALLOCATE_CONTEXT_HEADER* SupportedContexts[7];
+    /* 0x0170 */ PVOID PreVolumeMount /* function */;
+    /* 0x0178 */ PVOID PostVolumeMount /* function */;
+    /* 0x0180 */ PVOID GenerateFileName /* function */;
+    /* 0x0188 */ PVOID NormalizeNameComponent /* function */;
+    /* 0x0190 */ PVOID NormalizeNameComponentEx /* function */;
+    /* 0x0198 */ PVOID NormalizeContextCleanup /* function */;
+    /* 0x01a0 */ PVOID KtmNotification /* function */;
+    /* 0x01a8 */ PVOID SectionNotification /* function */;
+    /* 0x01b0 */ struct _FLT_OPERATION_REGISTRATION* Operations;
+    /* 0x01b8 */ PVOID OldDriverUnload /* function */;
+    /* 0x01c0 */ FLT_MUTEX_LIST_HEAD ActiveOpens;
+    /* 0x0210 */ FLT_MUTEX_LIST_HEAD ConnectionList;
+    /* 0x0260 */ FLT_MUTEX_LIST_HEAD PortList;
+    /* 0x02b0 */ EX_PUSH_LOCK_AUTO_EXPAND PortLock;
+} FLT_FILTER_V5, * PFLT_FILTER_V5; /* size: 0x02c0 */
+
+typedef FLT_FILTER_V5 FLT_FILTER_COMPATIBLE;
+typedef PFLT_FILTER_V5 PFLT_FILTER_COMPATIBLE;
 
 /*
 ** FLT MANAGER END
@@ -8223,6 +8349,14 @@ typedef VOID(CALLBACK *PLDR_DLL_NOTIFICATION_FUNCTION)(
 #define IMAGE_FILE_MACHINE_CHPE_X86 0x3A64
 #endif
 
+#ifndef IMAGE_FILE_MACHINE_ARM64EC
+#define IMAGE_FILE_MACHINE_ARM64EC           0xA641
+#endif
+
+#ifndef IMAGE_FILE_MACHINE_ARM64X
+#define IMAGE_FILE_MACHINE_ARM64X            0xA64E
+#endif
+
 NTSYSAPI
 NTSTATUS
 NTAPI
@@ -8243,7 +8377,7 @@ NTSYSAPI
 NTSTATUS
 NTAPI
 LdrEnumerateLoadedModules(
-    _In_opt_ ULONG Flags,
+    _In_ ULONG Flags,
     _In_ PLDR_LOADED_MODULE_ENUMERATION_CALLBACK_FUNCTION CallbackFunction,
     _In_opt_ PVOID Context);
 
@@ -12293,6 +12427,7 @@ typedef enum _MEMORY_PARTITION_INFORMATION_CLASS {
     SystemMemoryPartitionMemoryChargeAttributes,
     SystemMemoryPartitionClearAttributes,
     SystemMemoryPartitionSetMemoryThresholds,
+    SystemMemoryPartitionMemoryListCommand,
     SystemMemoryPartitionMax
 } MEMORY_PARTITION_INFORMATION_CLASS;
 
@@ -13023,7 +13158,7 @@ NTAPI
 NtSetValueKey(
     _In_ HANDLE KeyHandle,
     _In_ PUNICODE_STRING ValueName,
-    _In_opt_ ULONG TitleIndex,
+    _In_ ULONG TitleIndex,
     _In_ ULONG Type,
     _In_reads_bytes_opt_(DataSize) PVOID Data,
     _In_ ULONG DataSize);
@@ -14569,7 +14704,18 @@ NtSetIntervalProfile(
 * Signing Levels API.
 *
 ************************************************************************************/
-typedef UCHAR SE_SIGNING_LEVEL, * PSE_SIGNING_LEVEL;
+typedef UCHAR SE_SIGNING_LEVEL, *PSE_SIGNING_LEVEL;
+
+typedef struct _SE_FILE_CACHE_CLAIM_INFORMATION {
+    ULONG Size;
+    PVOID Claim;
+} SE_FILE_CACHE_CLAIM_INFORMATION, *PSE_FILE_CACHE_CLAIM_INFORMATION;
+
+typedef struct _SE_SET_FILE_CACHE_INFORMATION {
+    ULONG Size;
+    UNICODE_STRING CatalogDirectoryPath;
+    SE_FILE_CACHE_CLAIM_INFORMATION OriginClaimInfo;
+} SE_SET_FILE_CACHE_INFORMATION, *PSE_SET_FILE_CACHE_INFORMATION;
 
 #ifndef SE_SIGNING_LEVEL_UNCHECKED
 #define SE_SIGNING_LEVEL_UNCHECKED         0x00000000
@@ -14652,6 +14798,17 @@ NtSetCachedSigningLevel(
     _In_reads_(SourceFileCount) PHANDLE SourceFiles,
     _In_ ULONG SourceFileCount,
     _In_opt_ HANDLE TargetFile);
+
+NTSYSAPI
+NTSTATUS
+NTAPI
+NtSetCachedSigningLevel2(
+    _In_ ULONG Flags,
+    _In_ SE_SIGNING_LEVEL InputSigningLevel,
+    _In_reads_(SourceFileCount) PHANDLE SourceFiles,
+    _In_ ULONG SourceFileCount,
+    _In_opt_ HANDLE TargetFile,
+    _In_opt_ SE_SET_FILE_CACHE_INFORMATION* CacheInformation);
 
 NTSYSAPI
 NTSTATUS
