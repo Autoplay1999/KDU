@@ -2045,6 +2045,7 @@ VOID supPrintfEvent(
     ...
 )
 {
+#ifndef _LIB
     HANDLE stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_SCREEN_BUFFER_INFO screenBufferInfo;
     WORD origColor = FOREGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN, newColor;
@@ -2082,6 +2083,7 @@ VOID supPrintfEvent(
     // Restore original text color.
     //
     SetConsoleTextAttribute(stdHandle, origColor);
+#endif
 }
 
 /*

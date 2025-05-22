@@ -93,3 +93,7 @@ extern "C" {
 
 #define ASSERT_RESOLVED_FUNC(FunctionPtr) { if (FunctionPtr == 0) break; }
 #define ASSERT_RESOLVED_FUNC_ABORT(FunctionPtr) { if (FunctionPtr == 0) return FALSE; }
+
+#ifdef _LIB
+#	define printf_s(...) ((void)0)
+#endif

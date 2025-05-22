@@ -769,6 +769,7 @@ UINT KDUCheckAnotherInstance()
 * Program entry point.
 *
 */
+#ifndef _LIB
 int main()
 {
     HeapSetInformation(NULL, HeapEnableTerminationOnCorruption, NULL, 0);
@@ -795,3 +796,4 @@ int main()
     printf_s("[+] Return value: %d. Bye-bye!\r\n", retVal);
     return retVal;
 }
+#endif
