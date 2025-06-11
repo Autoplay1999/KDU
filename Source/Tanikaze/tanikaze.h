@@ -836,12 +836,17 @@ KDU_DB_ENTRY gProvEntry[] = {
     }
 
 };
-
+#ifndef _LIB
 #if defined(__cplusplus)
 extern "C" {
 #endif
+#endif
 
+#ifndef _LIB
     KDU_DB gProvTable = {
+#else
+    KDU_DB gProvTable_ = {
+#endif
         RTL_NUMBER_OF(gProvEntry),
         gProvEntry
     };
@@ -853,6 +858,8 @@ extern "C" {
         KDU_VERSION_BUILD
     };
 
+#ifndef _LIB
 #ifdef __cplusplus
 }
+#endif
 #endif

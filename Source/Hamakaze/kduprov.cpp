@@ -20,7 +20,13 @@
 #include "global.h"
 #include "kduplist.h"
 
+#ifndef _LIB
 PKDU_DB gProvTable = NULL;
+#else
+extern KDU_DB gProvTable_;
+extern KDU_DB_VERSION gVersion;
+PKDU_DB gProvTable;
+#endif
 
 PKDU_DB_ENTRY KDUProviderToDbEntry(
     _In_ ULONG ProviderId)
@@ -782,20 +788,22 @@ HINSTANCE KDUProviderLoadDB(
     BOOL bFailed = TRUE;
 
     FUNCTION_ENTER_MSG(__FUNCTION__);
-
+#ifndef _LIB
     SetDllDirectory(NULL);
     hInstance = LoadLibraryEx(DRV64DLL, NULL, DONT_RESOLVE_DLL_REFERENCES);
     if (hInstance) {
         printf_s("[+] Drivers database \"%ws\" loaded at 0x%p\r\n", DRV64DLL, hInstance);
-
+#endif
         do {
-
+#ifndef _LIB
             pVersionInfo = (PKDU_DB_VERSION)GetProcAddress(hInstance, "gVersion");
             if (pVersionInfo == NULL) {
                 supPrintfEvent(kduEventError, "[!] Providers version data not found\r\n");
                 break;
             }
-
+#else
+			pVersionInfo = &gVersion;
+#endif
             if (pVersionInfo->MajorVersion != KDU_VERSION_MAJOR ||
                 pVersionInfo->MinorVersion != KDU_VERSION_MINOR ||
                 pVersionInfo->Revision != KDU_VERSION_REVISION ||
@@ -816,27 +824,34 @@ HINSTANCE KDUProviderLoadDB(
             else {
                 printf_s("[+] Drivers database version is OK\r\n");
             }
-
+#ifndef _LIB
             gProvTable = (PKDU_DB)GetProcAddress(hInstance, "gProvTable");
             if (gProvTable == NULL) {
                 supPrintfEvent(kduEventError, "[!] Providers table not found\r\n");
                 break;
             }
+#else
+#undef gProvTable
+            gProvTable = &gProvTable_;
+            hInstance = (HINSTANCE)1;
+#endif
 
             bFailed = FALSE;
 
         } while (FALSE);
 
         if (bFailed) {
+#ifndef _LIB
             FreeLibrary(hInstance);
+#endif
             hInstance = NULL;
         }
-
+#ifndef _LIB
     }
     else {
         supShowWin32Error("[!] Cannot load drivers database", GetLastError());
     }
-
+#endif
     FUNCTION_LEAVE_MSG(__FUNCTION__);
 
     return hInstance;

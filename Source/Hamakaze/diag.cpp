@@ -84,6 +84,7 @@ VOID KDUPrintBooleanValueWithColor(
     _In_ BOOLEAN Value
 )
 {
+#ifndef _LIB
 #define PRINTGRN  "\x1B[32m"
 #define PRINTWHT "\x1B[37m"
 
@@ -97,6 +98,7 @@ VOID KDUPrintBooleanValueWithColor(
         printf_s("\t\t%s %s\r\n", Name, Value ? "TRUE" : "FALSE");
 
     }
+#endif
 }
 
 VOID KDUQuerySpecMitigationState()
