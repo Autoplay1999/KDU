@@ -79,9 +79,29 @@ PVOID KDULoadResource(
     if (DataSize)
         *DataSize = 0;
 
+#ifdef _LIB
+    PKDU_DB_RES_ENTRY pResEntry{};
+
+    for (ULONG i = 0; i < gResTable.NumberOfEntries; ++i) {
+        if (gResTable.Entries[i].ResourceId == ResourceId) {
+            pResEntry = &gResTable.Entries[i];
+            break;
+        }
+    }
+
+    if (!pResEntry) {
+#endif
+
     dataPtr = supQueryResourceData(ResourceId,
         DllHandle,
         &dataSize);
+
+#ifdef _LIB
+    } else {
+        dataPtr = (PBYTE)pResEntry->Data;
+        dataSize = pResEntry->Size;
+    }
+#endif
 
     if (dataPtr && dataSize) {
 

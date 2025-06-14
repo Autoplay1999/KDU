@@ -84,7 +84,8 @@ VOID KDUPrintBooleanValueWithColor(
     _In_ BOOLEAN Value
 )
 {
-#ifndef _LIB
+    UNREFERENCED_PARAMETER(Name);
+#ifndef _VERBOSE
 #define PRINTGRN  "\x1B[32m"
 #define PRINTWHT "\x1B[37m"
 

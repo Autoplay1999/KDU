@@ -75,3 +75,14 @@ typedef struct _KDU_DB_VERSION {
     WORD Revision;
     WORD Build;
 } KDU_DB_VERSION, * PKDU_DB_VERSION;
+
+typedef struct _KDU_DB_RES_ENTRY {
+    ULONG ResourceId;
+    const void* Data;
+    ULONG Size;
+} KDU_DB_RES_ENTRY, * PKDU_DB_RES_ENTRY;
+
+typedef struct _KDU_DB_RES {
+    ULONG NumberOfEntries;
+    KDU_DB_RES_ENTRY* Entries;
+} KDU_DB_RES, * PKDU_DB_RES;

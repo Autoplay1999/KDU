@@ -2032,6 +2032,106 @@ NTSTATUS supLoadFileForMapping(
 }
 
 /*
+* supLoadFileForMapping
+*
+* Purpose:
+*
+* Load input file for further driver mapping.
+*
+*/
+NTSTATUS supLoadFileForMapping(
+    _In_ PBYTE PayloadMemory,
+    _Out_ PVOID * LoadBase
+)
+{
+    NTSTATUS ntStatus;
+
+    PBYTE pvImage = NULL;
+    PIMAGE_NT_HEADERS pNtHeaders;
+
+    *LoadBase = NULL;
+
+    IMAGE_DOS_HEADER* pDosHeader = (IMAGE_DOS_HEADER*)PayloadMemory;
+    if (pDosHeader->e_magic != IMAGE_DOS_SIGNATURE) {
+        return STATUS_INVALID_IMAGE_FORMAT;
+    }
+
+    pNtHeaders = (IMAGE_NT_HEADERS*)(PayloadMemory + pDosHeader->e_lfanew);
+    if (pNtHeaders->Signature != IMAGE_NT_SIGNATURE) {
+        return STATUS_INVALID_IMAGE_FORMAT;
+    }
+    
+    SIZE_T imageSize = pNtHeaders->OptionalHeader.SizeOfImage;
+    ntStatus = NtAllocateVirtualMemory(
+        NtCurrentProcess(),
+        (PVOID*)&pvImage,
+        NULL,
+        &imageSize,
+        MEM_COMMIT | MEM_RESERVE,
+        PAGE_EXECUTE_READWRITE
+    );
+
+    if (!NT_SUCCESS(ntStatus)) {
+		return ntStatus;
+	}
+
+    memcpy(pvImage, PayloadMemory, pNtHeaders->OptionalHeader.SizeOfHeaders);
+    IMAGE_SECTION_HEADER* pSectionHeader = IMAGE_FIRST_SECTION(pNtHeaders);
+
+    for (int i = 0; i < pNtHeaders->FileHeader.NumberOfSections; i++, pSectionHeader++) {
+        memcpy(
+            pvImage + pSectionHeader->VirtualAddress,
+            PayloadMemory + pSectionHeader->PointerToRawData,
+            pSectionHeader->SizeOfRawData
+        );
+    }
+
+    DWORD_PTR delta = (DWORD_PTR)pvImage - pNtHeaders->OptionalHeader.ImageBase;
+
+    if (delta) {
+        IMAGE_DATA_DIRECTORY* pRelocDataDir = &pNtHeaders->OptionalHeader.DataDirectory[IMAGE_DIRECTORY_ENTRY_BASERELOC];
+
+        if (pRelocDataDir->Size > 0) {
+            IMAGE_BASE_RELOCATION* pReloc = (IMAGE_BASE_RELOCATION*)(pvImage + pRelocDataDir->VirtualAddress);
+
+            while (pReloc->VirtualAddress != 0) {
+                WORD* pRelocEntry = (WORD*)((BYTE*)pReloc + sizeof(IMAGE_BASE_RELOCATION));
+                int numEntries = (pReloc->SizeOfBlock - sizeof(IMAGE_BASE_RELOCATION)) / sizeof(WORD);
+
+                for (int i = 0; i < numEntries; i++, pRelocEntry++) {
+                    WORD type = (*pRelocEntry >> 12) & 0xF;
+                    WORD offset = *pRelocEntry & 0xFFF;
+                    PBYTE pPatchAddress = pvImage + pReloc->VirtualAddress + offset;
+
+                    switch (type) {
+                    case IMAGE_REL_BASED_HIGHLOW: {
+                        DWORD* pPatch = reinterpret_cast<DWORD*>(pPatchAddress);
+                        *pPatch += static_cast<DWORD>(delta);
+                        break;
+                    }
+                    case IMAGE_REL_BASED_DIR64: {
+                        ULONGLONG* pPatch = reinterpret_cast<ULONGLONG*>(pPatchAddress);
+                        *pPatch += delta;
+                        break;
+                    }
+                    default:
+                        break;
+                    }
+                }
+
+                pReloc = (IMAGE_BASE_RELOCATION*)((BYTE*)pReloc + pReloc->SizeOfBlock);
+            }
+        }
+    }
+
+	RtlImageNtHeader(pvImage)->OptionalHeader.ImageBase = (ULONG_PTR)pvImage;
+
+    *LoadBase = pvImage;
+
+    return STATUS_SUCCESS;
+}
+
+/*
 * supPrintfEvent
 *
 * Purpose:
@@ -2045,7 +2145,9 @@ VOID supPrintfEvent(
     ...
 )
 {
-#ifndef _LIB
+    UNREFERENCED_PARAMETER(Event);
+    UNREFERENCED_PARAMETER(Format);
+#ifdef _VERBOSE
     HANDLE stdHandle = GetStdHandle(STD_OUTPUT_HANDLE);
     CONSOLE_SCREEN_BUFFER_INFO screenBufferInfo;
     WORD origColor = FOREGROUND_BLUE | FOREGROUND_RED | FOREGROUND_GREEN, newColor;

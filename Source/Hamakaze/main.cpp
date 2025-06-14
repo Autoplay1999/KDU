@@ -309,6 +309,116 @@ INT KDUProcessDrvMapSwitch(
 }
 
 /*
+* KDUProcessDrvMapSwitch
+*
+* Purpose:
+*
+* Handle -map switch.
+*
+*/
+INT KDUProcessDrvMapSwitch(
+    _In_ ULONG HvciEnabled,
+    _In_ ULONG NtBuildNumber,
+    _In_ ULONG ProviderId,
+    _In_ ULONG ShellVersion,
+    _In_ PBYTE DriverMemory,
+    _In_opt_ LPWSTR DriverObjectName,
+    _In_opt_ LPWSTR DriverRegistryPath
+)
+{
+    INT retVal = 0;
+    KDU_CONTEXT* provContext;
+    PIMAGE_DOS_HEADER pDosHeader = (PIMAGE_DOS_HEADER)DriverMemory;
+
+    if (!pDosHeader || (pDosHeader->e_magic != IMAGE_DOS_SIGNATURE)) {
+		supPrintfEvent(kduEventError, "[!] Error while loading input driver memory, abort.\r\n");
+		return 0;
+	}
+
+    PIMAGE_NT_HEADERS pNtHeaders = (PIMAGE_NT_HEADERS)(DriverMemory + pDosHeader->e_lfanew);
+
+    if (!pNtHeaders || (pNtHeaders->Signature != IMAGE_NT_SIGNATURE)) {
+        supPrintfEvent(kduEventError, "[!] Error while loading input driver memory, abort.\r\n");
+        return 0;
+    }
+
+    printf_s("[*] Driver mapping using shellcode version: %lu\r\n", ShellVersion);
+
+    if (ShellVersion == KDU_SHELLCODE_V3) {
+
+        if (DriverObjectName == NULL) {
+
+            supPrintfEvent(kduEventError, "[!] Driver object name is required when working with this shellcode\r\n"\
+                "[?] Use the following commands to supply object name and optionally registry key name\r\n"\
+                "\t-drvn [ObjectName] and/or\r\n"\
+                "\t-drvr [ObjectKeyName]\r\n"\
+                "\te.g. kdu -scv 3 -drvn MyName -map MyDriver.sys\r\n"
+            );
+
+            return 0;
+        }
+        else {
+            printf_s("[+] Driver object name: \"%ws\"\r\n", DriverObjectName);
+        }
+
+        if (DriverRegistryPath) {
+            printf_s("[+] Registry key name: \"%ws\"\r\n", DriverRegistryPath);
+        }
+        else {
+            printf_s("[+] No driver registry key name specified, driver object name will be used instead\r\n");
+        }
+
+    }
+
+    PVOID pvImage = NULL;
+    SIZE_T vImageSize = pNtHeaders->OptionalHeader.SizeOfImage;
+    NTSTATUS ntStatus = supLoadFileForMapping(DriverMemory, &pvImage);
+
+    if ((!NT_SUCCESS(ntStatus)) || (pvImage == NULL)) {
+        supShowHardError("[!] Error while loading input driver memory", ntStatus);
+        return 0;
+    }
+    else {
+        printf_s("[+] Input driver memory loaded at 0x%p\r\n", pvImage);
+
+        provContext = KDUProviderCreate(ProviderId,
+            HvciEnabled,
+            NtBuildNumber,
+            ShellVersion,
+            ActionTypeMapDriver);
+
+        if (provContext) {
+
+            if (ShellVersion == KDU_SHELLCODE_V3) {
+
+                if (DriverObjectName) {
+                    ScCreateFixedUnicodeString(&provContext->DriverObjectName,
+                        DriverObjectName);
+
+                }
+
+                //
+                // Registry path name is optional.
+                // If not specified we will assume its the same name as driver object.
+                //
+                if (DriverRegistryPath) {
+                    ScCreateFixedUnicodeString(&provContext->DriverRegistryPath,
+                        DriverRegistryPath);
+                }
+
+            }
+
+            retVal = provContext->Provider->Callbacks.MapDriver(provContext, pvImage);
+            KDUProviderRelease(provContext);
+        }
+
+        NtFreeVirtualMemory(NtCurrentProcess(), &pvImage, &vImageSize, MEM_RELEASE);
+    }
+
+    return retVal;
+}
+
+/*
 * KDUProcessCommandLine
 *
 * Purpose:

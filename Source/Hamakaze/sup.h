@@ -285,6 +285,10 @@ NTSTATUS supLoadFileForMapping(
     _In_ LPCWSTR PayloadFileName,
     _Out_ PVOID * LoadBase);
 
+NTSTATUS supLoadFileForMapping(
+    _In_ PBYTE PayloadMemory,
+    _Out_ PVOID* LoadBase);
+
 VOID supPrintfEvent(
     _In_ KDU_EVENT_TYPE Event,
     _Printf_format_string_ LPCSTR Format,

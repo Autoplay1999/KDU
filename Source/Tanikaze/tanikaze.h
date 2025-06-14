@@ -836,10 +836,8 @@ KDU_DB_ENTRY gProvEntry[] = {
     }
 
 };
-#ifndef _LIB
 #if defined(__cplusplus)
 extern "C" {
-#endif
 #endif
 
 #ifndef _LIB
@@ -858,8 +856,6 @@ extern "C" {
         KDU_VERSION_BUILD
     };
 
-#ifndef _LIB
 #ifdef __cplusplus
 }
-#endif
 #endif

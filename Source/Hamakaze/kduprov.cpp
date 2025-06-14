@@ -23,8 +23,8 @@
 #ifndef _LIB
 PKDU_DB gProvTable = NULL;
 #else
-extern KDU_DB gProvTable_;
-extern KDU_DB_VERSION gVersion;
+extern "C" KDU_DB gProvTable_;
+extern "C" KDU_DB_VERSION gVersion;
 PKDU_DB gProvTable;
 #endif
 
@@ -783,7 +783,7 @@ HINSTANCE KDUProviderLoadDB(
     VOID
 )
 {
-    HINSTANCE hInstance;
+    HINSTANCE hInstance{};
     KDU_DB_VERSION *pVersionInfo;
     BOOL bFailed = TRUE;
 

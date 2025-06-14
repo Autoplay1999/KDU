@@ -90,10 +90,13 @@ extern "C" {
 #include "dsefix.h"
 #include "diag.h"
 #include "tests.h"
+#ifdef _LIB
+#	include "kduresource.h"
+#endif
 
 #define ASSERT_RESOLVED_FUNC(FunctionPtr) { if (FunctionPtr == 0) break; }
 #define ASSERT_RESOLVED_FUNC_ABORT(FunctionPtr) { if (FunctionPtr == 0) return FALSE; }
 
-#ifdef _LIB
+#ifndef _VERBOSE
 #	define printf_s(...) ((void)0)
 #endif
