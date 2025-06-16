@@ -427,6 +427,9 @@ INT KDUProcessDrvMapSwitch(
 *
 */
 INT KDUProcessCommandLine(
+#ifdef _LIB
+    _In_ LPTSTR CommandLine,
+#endif
     _In_ ULONG HvciEnabled,
     _In_ ULONG NtBuildNumber
 )
@@ -482,7 +485,11 @@ INT KDUProcessCommandLine(
         //
         // List providers.
         //
-        if (supGetCommandLineOption(CMD_LIST,
+        if (supGetCommandLineOption(
+#ifdef _LIB
+            CommandLine,
+#endif
+            CMD_LIST,
             FALSE,
             NULL,
             0,
@@ -496,7 +503,11 @@ INT KDUProcessCommandLine(
         //
         // List system information
         //
-        if (supGetCommandLineOption(CMD_SI,
+        if (supGetCommandLineOption(
+#ifdef _LIB
+            CommandLine,
+#endif
+            CMD_SI,
             FALSE,
             NULL,
             0,
@@ -510,7 +521,11 @@ INT KDUProcessCommandLine(
         //
         // Select CVE provider.
         //
-        if (supGetCommandLineOption(CMD_PRV,
+        if (supGetCommandLineOption(
+#ifdef _LIB
+            CommandLine,
+#endif
+            CMD_PRV,
             TRUE,
             szParameter,
             RTL_NUMBER_OF(szParameter),
@@ -539,7 +554,11 @@ INT KDUProcessCommandLine(
         //
         // Check if -dse specified.
         //
-        if (supGetCommandLineOption(CMD_DSE,
+        if (supGetCommandLineOption(
+#ifdef _LIB
+            CommandLine,
+#endif
+            CMD_DSE,
             TRUE,
             szParameter,
             RTL_NUMBER_OF(szParameter),
@@ -556,7 +575,11 @@ INT KDUProcessCommandLine(
             //
             // Check if -map specified.
             //
-            if (supGetCommandLineOption(CMD_MAP,
+            if (supGetCommandLineOption(
+#ifdef _LIB
+                CommandLine,
+#endif
+                CMD_MAP,
                 TRUE,
                 szParameter,
                 RTL_NUMBER_OF(szParameter),
@@ -575,7 +598,11 @@ INT KDUProcessCommandLine(
                     //
                     shellVersion = KDU_SHELLCODE_V1;
 
-                    if (supGetCommandLineOption(CMD_SCV,
+                    if (supGetCommandLineOption(
+#ifdef _LIB
+                        CommandLine,
+#endif
+                        CMD_SCV,
                         TRUE,
                         szExtraParameter,
                         RTL_NUMBER_OF(szExtraParameter),
@@ -600,7 +627,11 @@ INT KDUProcessCommandLine(
                     //
                     RtlSecureZeroMemory(szDriverName, sizeof(szDriverName));
                     paramLength = 0;
-                    supGetCommandLineOption(CMD_DRVNAME,
+                    supGetCommandLineOption(
+#ifdef _LIB
+                        CommandLine,
+#endif
+                        CMD_DRVNAME,
                         TRUE,
                         szDriverName,
                         RTL_NUMBER_OF(szDriverName),
@@ -610,7 +641,11 @@ INT KDUProcessCommandLine(
 
                     RtlSecureZeroMemory(szDriverRegPath, sizeof(szDriverRegPath));
                     paramLength = 0;
-                    supGetCommandLineOption(CMD_DRVREG,
+                    supGetCommandLineOption(
+#ifdef _LIB
+                        CommandLine,
+#endif
+                        CMD_DRVREG,
                         TRUE,
                         szDriverRegPath,
                         RTL_NUMBER_OF(szDriverRegPath),
@@ -634,7 +669,11 @@ INT KDUProcessCommandLine(
                 //
                 // Check if -ps specified.
                 //
-                if (supGetCommandLineOption(CMD_PS,
+                if (supGetCommandLineOption(
+#ifdef _LIB
+                    CommandLine,
+#endif
+                    CMD_PS,
                     TRUE,
                     szParameter,
                     RTL_NUMBER_OF(szParameter),
@@ -648,7 +687,11 @@ INT KDUProcessCommandLine(
                         processId);
                 }
 
-                else if (supGetCommandLineOption(CMD_PSE,
+                else if (supGetCommandLineOption(
+#ifdef _LIB
+                    CommandLine,
+#endif
+                    CMD_PSE,
                     TRUE,
                     szParameter,
                     RTL_NUMBER_OF(szParameter),
@@ -660,7 +703,11 @@ INT KDUProcessCommandLine(
                         szParameter);
                 }
 
-                else if (supGetCommandLineOption(CMD_DMP,
+                else if (supGetCommandLineOption(
+#ifdef _LIB
+                    CommandLine,
+#endif
+                    CMD_DMP,
                     TRUE,
                     szParameter,
                     RTL_NUMBER_OF(szParameter),
@@ -696,7 +743,11 @@ INT KDUProcessCommandLine(
 * KDU main.
 *
 */
+#ifdef _LIB
+int KDUMain(LPTSTR CommandLine)
+#else
 int KDUMain()
+#endif
 {
     INT iResult = 0;
     OSVERSIONINFO osv;
@@ -800,7 +851,12 @@ int KDUMain()
             }
         }
 
-        iResult = KDUProcessCommandLine(hvciEnabled, osv.dwBuildNumber);
+        iResult = KDUProcessCommandLine(
+#ifdef _LIB
+            CommandLine,
+#endif
+            hvciEnabled, 
+            osv.dwBuildNumber);
 
     } while (FALSE);
 

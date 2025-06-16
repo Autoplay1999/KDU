@@ -1394,6 +1394,9 @@ BOOL supQueryObjectFromHandle(
 *
 */
 BOOL supGetCommandLineOption(
+#ifdef _LIB
+    _In_ LPTSTR CommandLine,
+#endif
     _In_ LPCTSTR OptionName,
     _In_ BOOL IsParametric,
     _Inout_opt_ LPTSTR OptionValue,
@@ -1402,7 +1405,12 @@ BOOL supGetCommandLineOption(
 )
 {
     BOOL    bResult;
-    LPTSTR  cmdline = GetCommandLine();
+    LPTSTR  cmdline =
+#ifndef _LIB
+        GetCommandLine();
+#else
+        CommandLine;
+#endif
     TCHAR   Param[MAX_PATH + 1];
     ULONG   rlen;
     int     i = 0;

@@ -221,6 +221,9 @@ BOOL supQueryObjectFromHandle(
     _Out_ ULONG_PTR* Address);
 
 BOOL supGetCommandLineOption(
+#ifdef _LIB
+    _In_ LPTSTR CommandLine,
+#endif
     _In_ LPCTSTR OptionName,
     _In_ BOOL IsParametric,
     _Inout_opt_ LPTSTR OptionValue,
