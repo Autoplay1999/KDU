@@ -143,7 +143,7 @@
     <LinkIncremental>false</LinkIncremental>
     <OutDir>$(SolutionDir)..\Bin\</OutDir>
     <IntDir>$(SolutionDir)..\Bin\TMP\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <TargetName>drv64</TargetName>
+    <TargetName>drv64_d</TargetName>
     <GenerateManifest>false</GenerateManifest>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">

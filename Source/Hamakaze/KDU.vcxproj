@@ -85,7 +85,7 @@
     <LinkIncremental>true</LinkIncremental>
     <OutDir>$(SolutionDir)..\Bin\</OutDir>
     <IntDir>$(SolutionDir)..\Bin\TMP\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <TargetName>kdu</TargetName>
+    <TargetName>kdu_d</TargetName>
     <PostBuildEventUseInBuild>false</PostBuildEventUseInBuild>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
