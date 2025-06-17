@@ -453,7 +453,11 @@ INT KDUProcessCommandLine(
         // Test switches, never used/present in the release build.
         //
 
-        if (supGetCommandLineOption(CMD_TEST,
+        if (supGetCommandLineOption(
+#ifdef _LIB
+            CommandLine,
+#endif
+            CMD_TEST,
             FALSE,
             NULL,
             0,
@@ -464,7 +468,11 @@ INT KDUProcessCommandLine(
             break;
         }
 
-        if (supGetCommandLineOption(CMD_RNG,
+        if (supGetCommandLineOption(
+#ifdef _LIB
+            CommandLine,
+#endif
+            CMD_RNG,
             FALSE,
             NULL,
             0,
@@ -653,11 +661,19 @@ INT KDUProcessCommandLine(
 
                     lpParam2 = (paramLength != 0) ? szDriverRegPath : NULL;
 
+#ifdef _LIB
+                    PBYTE drvMemory = (PBYTE)wcstoull(szParameter, NULL, 16);
+#endif
+
                     retVal = KDUProcessDrvMapSwitch(HvciEnabled,
                         NtBuildNumber,
                         providerId,
                         shellVersion,
+#ifndef _LIB
                         szParameter,
+#else
+                        drvMemory,
+#endif
                         lpParam1,
                         lpParam2);
 
