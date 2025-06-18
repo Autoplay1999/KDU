@@ -16,4 +16,8 @@
     <LocalDebuggerCommandArguments>-prv 53 -map c:\install\dummy2.sys</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
+  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release_Lib_Verbose|x64'">
+    <LocalDebuggerCommandArguments>-prv 53 -map c:\install\dummy2.sys</LocalDebuggerCommandArguments>
+    <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+  </PropertyGroup>
 </Project>
