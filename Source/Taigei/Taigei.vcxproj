@@ -167,7 +167,7 @@
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <LinkIncremental>false</LinkIncremental>
     <IntDir>$(SolutionDir)..\Bin\TMP\$(ProjectName)\$(Platform)\$(Configuration)\</IntDir>
-    <TargetName>Taigei64_debug</TargetName>
+    <TargetName>Taigei64</TargetName>
     <OutDir>$(SolutionDir)..\Bin\</OutDir>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug_Lib|x64'">
