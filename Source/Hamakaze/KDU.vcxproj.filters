@@ -224,6 +224,8 @@
     </ClCompile>
     <ClCompile Include="kduresource.cpp">
       <Filter>Source Files</Filter>
+    <ClCompile Include="idrv\netease.cpp">
+      <Filter>Source Files\idrv</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -421,6 +423,8 @@
     </ClInclude>
     <ClInclude Include="kduresource.h">
       <Filter>Header Files</Filter>
+    <ClInclude Include="idrv\netease.h">
+      <Filter>Source Files\idrv</Filter>
     </ClInclude>
   </ItemGroup>
   <ItemGroup>
